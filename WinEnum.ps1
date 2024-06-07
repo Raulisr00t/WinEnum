@@ -148,44 +148,51 @@ if ($answer -eq "Y" -or $answer -eq "YES") {
 #######################
 # Active Directory Info #
 #######################
+$computerSystem = Get-WmiObject -Class Win32_ComputerSystem
+if ($computerSystem.PartOfDomain) {
+    Write-Output "This computer is part of a domain: $($computerSystem.Domain)"
 
-$domainControllers = Get-ADDomainController -Filter *
-Write-Host $separator
-
-$domainInfo = Get-ADDomain
-
-$specificUsers = Get-ADUser -Filter { Enabled -eq $true -and MemberOf -ne $null } -Properties DisplayName, SamAccountName, EmailAddress | Select-Object -First 10
-Write-Host $separator
-
-$groupMemberships = foreach ($user in $specificUsers) {
-    Get-ADUser $user.SamAccountName -Properties MemberOf | Select-Object -ExpandProperty MemberOf | Get-ADGroup | Select-Object Name, GroupScope, GroupCategory
-}
-Write-Host $separator
-
-$lockedOutUsers = Search-ADAccount -LockedOut | Select-Object Name, SamAccountName, LockedOut
-
-$inactiveUsers = Search-ADAccount -AccountInactive -TimeSpan 90.00:00:00 | Select-Object Name, SamAccountName, LastLogonDate
-
-$expiredUsers = Search-ADAccount -AccountExpired | Select-Object Name, SamAccountName, AccountExpirationDate
-Write-Host $separator
-
-$gpos = Get-GPO -All
-Write-Host $separator
-
-Write-Host "Group Policy Objects:"
-$gpos | Select-Object DisplayName, Id, CreationTime, ModificationTime
-Write-Output $separator
-
-$acl = Get-ObjectAcl -SamAccountName delegate -ResolveGUIDs | ? {$_.IdentityReference -eq "OFFENSE\spotless"}
-$acl2 = Get-ObjectAcl -ResolveGUIDs | ? {$_.objectdn -eq "CN=Domain Admins,CN=Users,DC=offense,DC=local" -and $_.IdentityReference -eq "OFFENSE\spotless"}
-$acl3 = Get-ObjectAcl -ResolveGUIDs | ? {$_.IdentityReference -eq "OFFENSE\spotless"}
-Write-Output $acl $acl2 $acl3| more
-Write-Host $separator
-
-$gpo_perm = Get-NetGPO | %{Get-ObjectAcl -ResolveGUIDs -Name $_.Name} | ? {$_.IdentityReference -eq "OFFENSE\spotless"}
-if ($gpo_perm){
-    Write-Output $gpo_perm
+    $domainControllers = Get-ADDomainController -Filter *
+    Write-Host $separator
+    
+    $domainInfo = Get-ADDomain
+    
+    $specificUsers = Get-ADUser -Filter { Enabled -eq $true -and MemberOf -ne $null } -Properties DisplayName, SamAccountName, EmailAddress | Select-Object -First 10
+    Write-Host $separator
+    
+    $groupMemberships = foreach ($user in $specificUsers) {
+        Get-ADUser $user.SamAccountName -Properties MemberOf | Select-Object -ExpandProperty MemberOf | Get-ADGroup | Select-Object Name, GroupScope, GroupCategory
     }
- Start-Sleep 2
- Write-Host $separator
-
+    Write-Host $separator
+    
+    $lockedOutUsers = Search-ADAccount -LockedOut | Select-Object Name, SamAccountName, LockedOut
+    
+    $inactiveUsers = Search-ADAccount -AccountInactive -TimeSpan 90.00:00:00 | Select-Object Name, SamAccountName, LastLogonDate
+    
+    $expiredUsers = Search-ADAccount -AccountExpired | Select-Object Name, SamAccountName, AccountExpirationDate
+    Write-Host $separator
+    
+    $gpos = Get-GPO -All
+    Write-Host $separator
+    
+    Write-Host "Group Policy Objects:"
+    $gpos | Select-Object DisplayName, Id, CreationTime, ModificationTime
+    Write-Output $separator
+    
+    $acl = Get-ObjectAcl -SamAccountName delegate -ResolveGUIDs | ? {$_.IdentityReference -eq "OFFENSE\spotless"}
+    $acl2 = Get-ObjectAcl -ResolveGUIDs | ? {$_.objectdn -eq "CN=Domain Admins,CN=Users,DC=offense,DC=local" -and $_.IdentityReference -eq "OFFENSE\spotless"}
+    $acl3 = Get-ObjectAcl -ResolveGUIDs | ? {$_.IdentityReference -eq "OFFENSE\spotless"}
+    Write-Output $acl $acl2 $acl3| more
+    Write-Host $separator
+    
+    $gpo_perm = Get-NetGPO | %{Get-ObjectAcl -ResolveGUIDs -Name $_.Name} | ? {$_.IdentityReference -eq "OFFENSE\spotless"}
+    if ($gpo_perm){
+        Write-Output $gpo_perm
+        }
+     Start-Sleep 2
+     Write-Host $separator
+    }
+else{
+    Write-Host "[-] Pc is not in domain [-]"
+    }
+    
